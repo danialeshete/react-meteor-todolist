@@ -26,12 +26,13 @@ class App extends Component {
         // Find the text field via the React ref
         const text = ReactDOM.findDOMNode(this.refs.textInput).value.trim();            //finde textInput und nimm Value
 
-        Tasks.insert({                      //insert text und date in mongodb
+        /* Tasks.insert({                      //insert text und date in mongodb
             text,
             createdAt: new Date(), // current time
             owner: Meteor.userId(),           // _id of logged in user
             username: Meteor.user().username,  // username of logged in user
-        });
+        }); */
+        Meteor.call('tasks.insert', text);
 
         // Clear form
         ReactDOM.findDOMNode(this.refs.textInput).value = '';       //lösche textinput value
@@ -50,12 +51,24 @@ class App extends Component {
             filteredTasks = filteredTasks.filter(task => !task.checked);       //wenn hideCompleted == true dann filtern takss nach nicht gecheckt
         }
 
-        return filteredTasks.map((task) => (        //nimm alle gefilteret und zeig nach einander
+        /* return filteredTasks.map((task) => (        //nimm alle gefilteret und zeig nach einander
             <Task key={task._id} task={task} />
+        )); */
+        return filteredTasks.map((task) => {            //nimm alle gefilteret und zeig nach einander
 
+            const currentUserId = this.props.currentUser && this.props.currentUser._id;
+            const showPrivateButton = task.owner === currentUserId;
 
-        ));
+            return (
+                <Task
+                    key={task._id}
+                    task={task}
+                    showPrivateButton={showPrivateButton}
+                />
+            );
+        });
     }
+    
 
     render() {
         return (
@@ -86,7 +99,7 @@ class App extends Component {
 
                 <ul>
                     {this.renderTasks()}
-                    {console.log(this.props.tasks)}
+                    {console.log(this.props)}
                 </ul>
             </div>
         );
@@ -94,6 +107,7 @@ class App extends Component {
 }
 
 export default withTracker(() => {
+    Meteor.subscribe('tasks');    //subscribe to the publication when the App component is created
     return {
         tasks: Tasks.find({}, { sort: { createdAt: -1 } }).fetch(), //die neuste kommt oben
         incompleteCount: Tasks.find({ checked: { $ne: true } }).count(), //anzahl der nicht checked wird aufgezählt
